@@ -1,0 +1,27 @@
+{
+  "name": "TTFE",
+  "version": "1.0.0",
+  "description": "test tool for [webml-polyfill examples](https://github.com/intel/webml-polyfill/tree/master/examples)",
+  "main": "./src/main.js",
+  "directories": {
+    "lib": "lib",
+    "src": "src"
+  },
+  "scripts": {
+    "test": "node ./src/main.js"
+  },
+  "devDependencies": {
+    "selenium-webdriver": "^4.0.0-alpha.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cuiyanx/TTFE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cuiyanx/TTFE/issues"
+  },
+  "homepage": "https://github.com/cuiyanx/TTFE#readme"
+}
