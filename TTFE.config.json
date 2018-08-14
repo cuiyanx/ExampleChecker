@@ -1,0 +1,42 @@
+{
+    "exampleURL": "http://10.126.1.206:8080/examples/",
+    "mobilenet": {
+        "WASM": {
+            "inferenceTime": null,
+            "probability": null
+        },
+        "WebGL2": {
+            "inferenceTime": null,
+            "probability": null
+        },
+        "WebML": {
+            "inferenceTime": null,
+            "probability": null
+        }
+    },
+    "squeezenet": {
+        "WASM": {
+            "inferenceTime": null,
+            "probability": null
+        },
+        "WebGL2": {
+            "inferenceTime": null,
+            "probability": null
+        },
+        "WebML": {
+            "inferenceTime": null,
+            "probability": null
+        }
+    },
+    "ssd_mobilenet": {
+        "WASM": {
+            "inferenceTime": null
+        },
+        "WebGL2": {
+            "inferenceTime": null
+        },
+        "WebML": {
+            "inferenceTime": null
+        }
+    }
+}
