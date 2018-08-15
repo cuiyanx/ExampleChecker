@@ -11,7 +11,7 @@ const driver = new Builder()
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
 var sleepTime = 5000;
-var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet"];
+var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
 var backendModels = ["WASM", "WebGL2", "WebML"];
 
 var backendId = new Map();
@@ -189,7 +189,9 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
                     }
                 });
 
-                if (mlTools[i] !== "ssd_mobilenet") {
+                if (mlTools[i] == "ssd_mobilenet" || mlTools[i] == "posenet") {
+                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, null);
+                } else {
                     let probabilityFirst;
                     await driver.findElement(By.xpath("//*[@id='prob0']")).getText().then(function(message) {
                         probabilityFirst = message.slice(0, -1);
@@ -202,8 +204,6 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
                     });
 
                     checkTestResult(mlTools[i], backendModels[j], inferenceTime, probabilityFirst);
-                } else {
-                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, null);
                 }
             }
         }
