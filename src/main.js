@@ -3,11 +3,6 @@ const By = require("../node_modules/selenium-webdriver").By;
 const Chrome = require("../node_modules/selenium-webdriver/chrome");
 const fs = require("fs");
 
-const driver = new Builder()
-    .forBrowser("chrome")
-    .setChromeOptions(new Chrome.Options())
-    .build();
-
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
 var libPath = process.cwd() + "/lib/";
@@ -19,6 +14,18 @@ var backendId = new Map();
 backendId.set("WASM", "wasm");
 backendId.set("WebGL2", "webgl");
 backendId.set("WebML", "webml");
+
+var browserPath = "/usr/bin/chromium-browser-unstable";
+var chromeOption = new Chrome.Options();
+
+if (TTFEjson.chromium) {
+    chromeOption = chromeOption.setChromeBinaryPath(browserPath);
+}
+
+const driver = new Builder()
+    .forBrowser("chrome")
+    .setChromeOptions(chromeOption)
+    .build();
 
 var debugFlag = false;
 function TTFElog (target, message) {
