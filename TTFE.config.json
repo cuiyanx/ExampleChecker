@@ -1,5 +1,12 @@
 {
     "exampleURL": "http://10.126.1.202:8080/examples/",
+    "image": {
+        "flag": false,
+        "mobilenet": "cheeseburger.jpg",
+        "squeezenet": "revolver.jpg",
+        "ssd_mobilenet": "giant-panda.jpg",
+        "posenet": "football-player.jpg"
+    },
     "mobilenet": {
         "WASM": {
             "inferenceTime": null,

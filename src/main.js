@@ -10,6 +10,7 @@ const driver = new Builder()
 
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
+var libPath = process.cwd() + "/lib/";
 var sleepTime = 10000;
 var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
 var backendModels = ["WASM", "WebGL2", "WebML"];
@@ -28,6 +29,22 @@ function TTFElog (target, message) {
     } else {
         throw new Error("Not support target '" + target + "'");
     }
+}
+
+function getImage (mlTool) {
+    let imageName;
+
+    if (mlTool == "mobilenet") {
+        imageName = TTFEjson.image.mobilenet;
+    } else if (mlTool == "squeezenet") {
+        imageName = TTFEjson.image.squeezenet;
+    } else if (mlTool == "ssd_mobilenet") {
+        imageName = TTFEjson.image.ssd_mobilenet;
+    } else if (mlTool == "posenet") {
+        imageName = TTFEjson.image.posenet;
+    }
+
+    return imageName;
 }
 
 function getBenchmark (mlTool, backendModel, parameter) {
@@ -174,7 +191,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
 }
 
 (async function() {
-    TTFElog("console", "example test is start with the default image");
+    TTFElog("console", "example test is start");
 
     for (let i = 0; i < mlTools.length; i++) {
         await driver.get(exampleURL + mlTools[i]);
@@ -185,6 +202,23 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
         } else {
             await driver.sleep(sleepTime);
         }
+
+        if (TTFEjson.image.flag == true) {
+            TTFElog("console", "with image '" + getImage(mlTools[i]) + "'");
+
+            let imagePath = libPath + getImage(mlTools[i]);
+            TTFElog("debug", "current image path '" + imagePath + "'");
+
+            if (mlTools[i] == "posenet") {
+                await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath);
+            } else {
+                await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath);
+            }
+        } else {
+            TTFElog("console", "with the default image");
+        }
+
+        await driver.sleep(sleepTime);
 
         for (let j = 0; j < backendModels.length; j++) {
             let backendModel;
