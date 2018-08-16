@@ -39,6 +39,8 @@ function getBenchmark (mlTool, backendModel, parameter) {
         value = TTFEjson.squeezenet;
     } else if (mlTool == "ssd_mobilenet") {
         value = TTFEjson.ssd_mobilenet;
+    } else if (mlTool == "posenet") {
+        value = TTFEjson.posenet;
     }
 
     if (backendModel == "WASM") {
@@ -51,6 +53,8 @@ function getBenchmark (mlTool, backendModel, parameter) {
 
     if (parameter == "inferenceTime") {
         value = value.inferenceTime;
+    } else if (parameter == "name") {
+        value = value.name;
     } else if (parameter == "probability") {
         value = value.probability;
     }
@@ -63,18 +67,24 @@ function setBenchmark (mlTool, backendModel, parameter, value) {
         if (backendModel == "WASM") {
             if (parameter == "inferenceTime") {
                 TTFEjson.mobilenet.WASM.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.mobilenet.WASM.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.mobilenet.WASM.probability = value;
             }
         } else if (backendModel == "WebGL2") {
             if (parameter == "inferenceTime") {
                 TTFEjson.mobilenet.WebGL2.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.mobilenet.WebGL2.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.mobilenet.WebGL2.probability = value;
             }
         } else if (backendModel == "WebML") {
             if (parameter == "inferenceTime") {
                 TTFEjson.mobilenet.WebML.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.mobilenet.WebML.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.mobilenet.WebML.probability = value;
             }
@@ -83,18 +93,24 @@ function setBenchmark (mlTool, backendModel, parameter, value) {
         if (backendModel == "WASM") {
             if (parameter == "inferenceTime") {
                 TTFEjson.squeezenet.WASM.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.squeezenet.WASM.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.squeezenet.WASM.probability = value;
             }
         } else if (backendModel == "WebGL2") {
             if (parameter == "inferenceTime") {
                 TTFEjson.squeezenet.WebGL2.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.squeezenet.WebGL2.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.squeezenet.WebGL2.probability = value;
             }
         } else if (backendModel == "WebML") {
             if (parameter == "inferenceTime") {
                 TTFEjson.squeezenet.WebML.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.squeezenet.WebML.name = value;
             } else if (parameter == "probability") {
                 TTFEjson.squeezenet.WebML.probability = value;
             }
@@ -103,20 +119,28 @@ function setBenchmark (mlTool, backendModel, parameter, value) {
         if (backendModel == "WASM") {
             if (parameter == "inferenceTime") {
                 TTFEjson.ssd_mobilenet.WASM.inferenceTime = value;
-            } else if (parameter == "probability") {
-                TTFEjson.ssd_mobilenet.WASM.probability = value;
             }
         } else if (backendModel == "WebGL2") {
             if (parameter == "inferenceTime") {
                 TTFEjson.ssd_mobilenet.WebGL2.inferenceTime = value;
-            } else if (parameter == "probability") {
-                TTFEjson.ssd_mobilenet.WebGL2.probability = value;
             }
         } else if (backendModel == "WebML") {
             if (parameter == "inferenceTime") {
                 TTFEjson.ssd_mobilenet.WebML.inferenceTime = value;
-            } else if (parameter == "probability") {
-                TTFEjson.ssd_mobilenet.WebML.probability = value;
+            }
+        }
+    } else if (mlTool == "posenet") {
+        if (backendModel == "WASM") {
+            if (parameter == "inferenceTime") {
+                TTFEjson.posenet.WASM.inferenceTime = value;
+            }
+        } else if (backendModel == "WebGL2") {
+            if (parameter == "inferenceTime") {
+                TTFEjson.posenet.WebGL2.inferenceTime = value;
+            }
+        } else if (backendModel == "WebML") {
+            if (parameter == "inferenceTime") {
+                TTFEjson.posenet.WebML.inferenceTime = value;
             }
         }
     }
@@ -124,12 +148,19 @@ function setBenchmark (mlTool, backendModel, parameter, value) {
     fs.writeFileSync("./TTFE.config.json", JSON.stringify(TTFEjson, null, 4));
 }
 
-function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
+function checkTestResult (mlTool, backendModel, inferenceTime, name, probability) {
     let result = "passed";
 
     let benchmarkTime = getBenchmark(mlTool, backendModel, "inferenceTime");
     if (inferenceTime > benchmarkTime && ((inferenceTime - benchmarkTime) > benchmarkTime * 0.05)) {
         result = "failed";
+    }
+
+    if (name !== null && result !== "failed") {
+        let benchmarkName = getBenchmark(mlTool, backendModel, "name");
+        if (name !== benchmarkName) {
+            result = "failed";
+        }
     }
 
     if (probability !== null && result !== "failed") {
@@ -166,6 +197,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
 
             if (backendModel !== backendModels[j]) {
                 await backendElement.click();
+                await driver.sleep(3000);
                 await driver.findElement(By.xpath('//*[@id="' + backendId.get(backendModels[j]) + '"]')).click();
                 TTFElog("debug", "change current backend to '" + backendModels[j] + "'");
             } else {
@@ -195,9 +227,19 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
                 });
 
                 if (mlTools[i] == "ssd_mobilenet" || mlTools[i] == "posenet") {
-                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, null);
+                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, null, null);
                 } else {
-                    let probabilityFirst;
+                    let nameFirst, probabilityFirst;
+                    await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
+                        nameFirst = message;
+                        TTFElog("debug", "current first name '" + nameFirst + "'");
+
+                        if (getBenchmark(mlTools[i], backendModels[j], "name") == null) {
+                            setBenchmark(mlTools[i], backendModels[j], "name", nameFirst);
+                            TTFElog("console", "set benchmark " + mlTools[i] + " " + backendModels[j] + " name '" + nameFirst + "'");
+                        }
+                    });
+
                     await driver.findElement(By.xpath("//*[@id='prob0']")).getText().then(function(message) {
                         probabilityFirst = message.slice(0, -1);
                         TTFElog("debug", "current first probability '" + probabilityFirst + "'");
@@ -208,7 +250,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
                         }
                     });
 
-                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, probabilityFirst);
+                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, nameFirst, probabilityFirst);
                 }
             }
         }

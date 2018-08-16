@@ -3,28 +3,34 @@
     "mobilenet": {
         "WASM": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         },
         "WebGL2": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         },
         "WebML": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         }
     },
     "squeezenet": {
         "WASM": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         },
         "WebGL2": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         },
         "WebML": {
             "inferenceTime": null,
+            "name": null,
             "probability": null
         }
     },
