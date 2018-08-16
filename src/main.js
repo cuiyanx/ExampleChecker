@@ -10,7 +10,7 @@ const driver = new Builder()
 
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
-var sleepTime = 5000;
+var sleepTime = 10000;
 var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
 var backendModels = ["WASM", "WebGL2", "WebML"];
 
@@ -147,8 +147,13 @@ function checkTestResult (mlTool, backendModel, inferenceTime, probability) {
 
     for (let i = 0; i < mlTools.length; i++) {
         await driver.get(exampleURL + mlTools[i]);
-        await driver.sleep(sleepTime);
         TTFElog("console", "open '" + exampleURL + mlTools[i] + "'");
+
+        if (mlTools[i] == "posenet") {
+            await driver.sleep(sleepTime * 4);
+        } else {
+            await driver.sleep(sleepTime);
+        }
 
         for (let j = 0; j < backendModels.length; j++) {
             let backendModel;

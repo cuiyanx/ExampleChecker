@@ -1,5 +1,5 @@
 {
-    "exampleURL": "http://10.126.1.206:8080/examples/",
+    "exampleURL": "http://10.126.1.202:8080/examples/",
     "mobilenet": {
         "WASM": {
             "inferenceTime": null,
