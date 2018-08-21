@@ -15,10 +15,10 @@ backendId.set("WASM", "wasm");
 backendId.set("WebGL2", "webgl");
 backendId.set("WebML", "webml");
 
-var browserPath = "/usr/bin/chromium-browser-unstable";
+var browserPath = TTFEjson.chromium.path;
 var chromeOption = new Chrome.Options();
 
-if (TTFEjson.chromium) {
+if (TTFEjson.chromium.flag) {
     chromeOption = chromeOption.setChromeBinaryPath(browserPath);
 }
 

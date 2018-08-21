@@ -1,6 +1,9 @@
 {
     "exampleURL": "http://10.126.1.202:8080/examples/",
-    "chromium": false,
+    "chromium": {
+        "flag": false,
+        "path": "/usr/bin/chromium-browser-unstable"
+    },
     "image": {
         "flag": false,
         "mobilenet": "cheeseburger.jpg",
