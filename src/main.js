@@ -1,12 +1,12 @@
 const Builder = require("../node_modules/selenium-webdriver").Builder;
 const By = require("../node_modules/selenium-webdriver").By;
+const until = require("../node_modules/selenium-webdriver").until;
 const Chrome = require("../node_modules/selenium-webdriver/chrome");
 const fs = require("fs");
 
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
 var libPath = process.cwd() + "/lib/";
-var sleepTime = 10000;
 var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
 var backendModels = ["WASM", "WebGL2", "WebML"];
 
@@ -204,11 +204,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
         await driver.get(exampleURL + mlTools[i]);
         TTFElog("console", "open '" + exampleURL + mlTools[i] + "'");
 
-        if (mlTools[i] == "posenet") {
-            await driver.sleep(sleepTime * 4);
-        } else {
-            await driver.sleep(sleepTime);
-        }
+        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
 
         if (TTFEjson.image.flag == true) {
             TTFElog("console", "with image '" + getImage(mlTools[i]) + "'");
@@ -225,7 +221,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
             TTFElog("console", "with the default image");
         }
 
-        await driver.sleep(sleepTime);
+        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
 
         for (let j = 0; j < backendModels.length; j++) {
             let backendModel;
@@ -245,7 +241,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                 TTFElog("debug", "no need to change current backend");
             }
 
-            await driver.sleep(sleepTime);
+            await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
 
             let checkBackendModel;
             await backendElement.getText().then(function(message) {
@@ -297,7 +293,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
         }
     }
 
-    await driver.sleep(sleepTime);
+    await driver.sleep(5000);
     await driver.quit();
 })().then(function() {
     TTFElog("console", "example test is completed");
