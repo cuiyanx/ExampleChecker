@@ -294,9 +294,10 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
     }
 
     await driver.sleep(5000);
-    await driver.quit();
 })().then(function() {
     TTFElog("console", "example test is completed");
+    driver.quit();
 }).catch(function(err) {
-    throw err;
+    TTFElog("console", err);
+    driver.quit();
 });
