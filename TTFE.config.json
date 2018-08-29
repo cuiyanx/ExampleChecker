@@ -1,5 +1,5 @@
 {
-    "exampleURL": "http://10.126.1.202:8080/examples/",
+    "exampleURL": "http://10.126.1.200:8080/examples/",
     "chromium": {
         "flag": false,
         "path": "/usr/bin/chromium-browser-unstable"
@@ -40,6 +40,16 @@
             "probability": null
         },
         "WebML": {
+            "inferenceTime": null,
+            "name": null,
+            "probability": null
+        },
+        "MPS": {
+            "inferenceTime": null,
+            "name": null,
+            "probability": null
+        },
+        "BNNS": {
             "inferenceTime": null,
             "name": null,
             "probability": null

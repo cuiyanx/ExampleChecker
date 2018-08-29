@@ -3,17 +3,28 @@ const By = require("../node_modules/selenium-webdriver").By;
 const until = require("../node_modules/selenium-webdriver").until;
 const Chrome = require("../node_modules/selenium-webdriver/chrome");
 const fs = require("fs");
+const os = require("os");
 
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
 var libPath = process.cwd() + "/lib/";
 var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
-var backendModels = ["WASM", "WebGL2", "WebML"];
+var backendModels = ["WASM", "WebGL2", "WebML", "MPS", "BNNS"];
 
 var backendId = new Map();
 backendId.set("WASM", "wasm");
 backendId.set("WebGL2", "webgl");
 backendId.set("WebML", "webml");
+
+var platform = null;
+var sys = os.type();
+if (sys == "Linux") {
+    platform = "linux";
+} else if (sys == "Darwin") {
+    platform = "mac";
+} else if (sys == "Windows_NT") {
+    platform = "windows";
+}
 
 var browserPath = TTFEjson.chromium.path;
 var chromeOption = new Chrome.Options();
@@ -73,6 +84,10 @@ function getBenchmark (mlTool, backendModel, parameter) {
         value = value.WebGL2;
     } else if (backendModel == "WebML") {
         value = value.WebML;
+    } else if (backendModel == "MPS") {
+        value = value.MPS;
+    } else if (backendModel == "BNNS") {
+        value = value.BNNS;
     }
 
     if (parameter == "inferenceTime") {
@@ -138,6 +153,22 @@ function setBenchmark (mlTool, backendModel, parameter, value) {
             } else if (parameter == "probability") {
                 TTFEjson.squeezenet.WebML.probability = value;
             }
+        } else if (backendModel == "MPS") {
+            if (parameter == "inferenceTime") {
+                TTFEjson.squeezenet.MPS.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.squeezenet.MPS.name = value;
+            } else if (parameter == "probability") {
+                TTFEjson.squeezenet.MPS.probability = value;
+            }
+        } else if (backendModel == "BNNS") {
+            if (parameter == "inferenceTime") {
+                TTFEjson.squeezenet.BNNS.inferenceTime = value;
+            } else if (parameter == "name") {
+                TTFEjson.squeezenet.BNNS.name = value;
+            } else if (parameter == "probability") {
+                TTFEjson.squeezenet.BNNS.probability = value;
+            }
         }
     } else if (mlTool == "ssd_mobilenet") {
         if (backendModel == "WASM") {
@@ -201,76 +232,99 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
     TTFElog("console", "example test is start");
 
     for (let i = 0; i < mlTools.length; i++) {
-        await driver.get(exampleURL + mlTools[i]);
-        TTFElog("console", "open '" + exampleURL + mlTools[i] + "'");
-
-        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000).catch(function() {
-            throw new Error("failed to load web page");
-        });
-
-        let imageURL, imageTime, imagePath;
-        if (TTFEjson.image.flag == true) {
-            TTFElog("console", "with image '" + getImage(mlTools[i]) + "'");
-
-            imagePath = libPath + getImage(mlTools[i]);
-            TTFElog("debug", "current image path '" + imagePath + "'");
-
-            if (mlTools[i] == "posenet") {
-                await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
-                    TTFElog("debug", message);
-                    imageTime = message;
-                });
-
-                await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath);
-
-                await driver.wait(function() {
-                    return driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
-                        return (message !== imageTime);
-                    });
-                }, 100000).catch(function() {
-                    throw new Error("failed to load image");
-                });
-            } else {
-                await driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
-                    TTFElog("debug", message);
-                    imageURL = message;
-                });
-
-                await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath);
-
-                await driver.wait(function() {
-                    return driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
-                        return (message !== imageURL);
-                    });
-                }, 100000).catch(function() {
-                    throw new Error("failed to load image");
-                });
-            }
-        } else {
-            TTFElog("console", "with the default image");
-        }
-
         for (let j = 0; j < backendModels.length; j++) {
-            let backendModel;
+            let mlTool = mlTools[i];
+            let backendModel = backendModels[j];
+            let pageURL = exampleURL + mlTool + "/";
+
+            if (backendModel == "MPS" || backendModel == "BNNS") {
+                if (platform == "mac" && mlTool == "squeezenet") {
+                    if (backendModel == "MPS") {
+                        pageURL = pageURL + "index.html?prefer=sustained";
+                        backendModel = "WebML";
+                    } else if (backendModel == "BNNS") {
+                        pageURL = pageURL + "index.html?prefer=fast";
+                        backendModel = "WebML";
+                    }
+                } else {
+                    TTFElog("debug", "example: not support " + mlTool + " " + backendModel + " on " + platform);
+                    continue;
+                }
+            }
+
+            await driver.getCurrentUrl().then(async function(url) {
+                if (url !== pageURL) {
+                    await driver.get(pageURL);
+                    TTFElog("console", "open '" + pageURL + "'");
+
+                    await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000).catch(function() {
+                        throw new Error("failed to load web page");
+                    });
+
+                    let imageURL, imageTime, imagePath;
+                    if (TTFEjson.image.flag == true) {
+                        TTFElog("console", "with image '" + getImage(mlTool) + "'");
+
+                        imagePath = libPath + getImage(mlTool);
+                        TTFElog("debug", "current image path '" + imagePath + "'");
+
+                        if (mlTool == "posenet") {
+                            await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                                TTFElog("debug", message);
+                                imageTime = message;
+                            });
+
+                            await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath);
+
+                            await driver.wait(function() {
+                                return driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                                    return (message !== imageTime);
+                                });
+                            }, 100000).catch(function() {
+                                throw new Error("failed to load image");
+                            });
+                        } else {
+                            await driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                                TTFElog("debug", message);
+                                imageURL = message;
+                            });
+
+                            await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath);
+
+                            await driver.wait(function() {
+                                return driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                                    return (message !== imageURL);
+                                });
+                            }, 100000).catch(function() {
+                                throw new Error("failed to load image");
+                            });
+                        }
+                    } else {
+                        TTFElog("console", "with the default image");
+                    }
+                }
+            });
+
+            let backendCurrent;
             let backendElement = await driver.findElement(By.xpath("//*[@id='backend']"));
 
             await backendElement.getText().then(function(message) {
-                backendModel = message;
-                TTFElog("debug", "current backend '" + backendModel + "'");
+                backendCurrent = message;
+                TTFElog("debug", "current backend '" + backendCurrent + "'");
             });
 
-            if (backendModel !== backendModels[j]) {
+            if (backendCurrent !== backendModel) {
                 await backendElement.click();
                 await driver.sleep(3000);
-                await driver.findElement(By.xpath('//*[@id="' + backendId.get(backendModels[j]) + '"]')).click();
-                TTFElog("debug", "change current backend to '" + backendModels[j] + "'");
+                await driver.findElement(By.xpath('//*[@id="' + backendId.get(backendModel) + '"]')).click();
+                TTFElog("debug", "change current backend to '" + backendModel + "'");
             } else {
                 TTFElog("debug", "no need to change current backend");
             }
 
             await driver.wait(function() {
                 return backendElement.getText().then(function(message) {
-                    return (message === backendModels[j]);
+                    return (message === backendModel);
                 });
             }, 10000).then(async function() {
                 let inferenceTime;
@@ -278,23 +332,23 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                     inferenceTime = message;
                     TTFElog("debug", "current inference time '" + inferenceTime + "'");
 
-                    if (getBenchmark(mlTools[i], backendModels[j], "inferenceTime") == null) {
-                        setBenchmark(mlTools[i], backendModels[j], "inferenceTime", inferenceTime);
-                        TTFElog("console", "set benchmark " + mlTools[i] + " " + backendModels[j] + " inference time '" + inferenceTime + "'");
+                    if (getBenchmark(mlTool, backendModel, "inferenceTime") == null) {
+                        setBenchmark(mlTool, backendModel, "inferenceTime", inferenceTime);
+                        TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " inference time '" + inferenceTime + "'");
                     }
                 });
 
-                if (mlTools[i] == "ssd_mobilenet" || mlTools[i] == "posenet") {
-                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, null, null);
+                if (mlTool == "ssd_mobilenet" || mlTool == "posenet") {
+                    checkTestResult(mlTool, backendModel, inferenceTime, null, null);
                 } else {
                     let nameFirst, probabilityFirst;
                     await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
                         nameFirst = message;
                         TTFElog("debug", "current first name '" + nameFirst + "'");
 
-                        if (getBenchmark(mlTools[i], backendModels[j], "name") == null) {
-                            setBenchmark(mlTools[i], backendModels[j], "name", nameFirst);
-                            TTFElog("console", "set benchmark " + mlTools[i] + " " + backendModels[j] + " name '" + nameFirst + "'");
+                        if (getBenchmark(mlTool, backendModel, "name") == null) {
+                            setBenchmark(mlTool, backendModel, "name", nameFirst);
+                            TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " name '" + nameFirst + "'");
                         }
                     });
 
@@ -302,22 +356,22 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                         probabilityFirst = message.slice(0, -1);
                         TTFElog("debug", "current first probability '" + probabilityFirst + "'");
 
-                        if (getBenchmark(mlTools[i], backendModels[j], "probability") == null) {
-                            setBenchmark(mlTools[i], backendModels[j], "probability", probabilityFirst);
-                            TTFElog("console", "set benchmark " + mlTools[i] + " " + backendModels[j] + " probability '" + probabilityFirst + "'");
+                        if (getBenchmark(mlTool, backendModel, "probability") == null) {
+                            setBenchmark(mlTool, backendModel, "probability", probabilityFirst);
+                            TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " probability '" + probabilityFirst + "'");
                         }
                     });
 
-                    checkTestResult(mlTools[i], backendModels[j], inferenceTime, nameFirst, probabilityFirst);
+                    checkTestResult(mlTool, backendModel, inferenceTime, nameFirst, probabilityFirst);
                 }
             }).catch(function() {
-                TTFElog("debug", "can not change current backend to '" + backendModels[j] + "'");
-                TTFElog("console", "example: " + mlTools[i] + " " + backendModels[j] + " is canceled");
+                TTFElog("debug", "can not change current backend to '" + backendModel + "'");
+                TTFElog("console", "example: " + mlTool + " " + backendModel + " is canceled");
             });
+
+            await driver.sleep(3000);
         }
     }
-
-    await driver.sleep(5000);
 })().then(function() {
     TTFElog("console", "example test is completed");
     driver.quit();
