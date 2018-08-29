@@ -204,24 +204,51 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
         await driver.get(exampleURL + mlTools[i]);
         TTFElog("console", "open '" + exampleURL + mlTools[i] + "'");
 
-        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
+        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000).catch(function() {
+            throw new Error("failed to load web page");
+        });
 
+        let imageURL, imageTime, imagePath;
         if (TTFEjson.image.flag == true) {
             TTFElog("console", "with image '" + getImage(mlTools[i]) + "'");
 
-            let imagePath = libPath + getImage(mlTools[i]);
+            imagePath = libPath + getImage(mlTools[i]);
             TTFElog("debug", "current image path '" + imagePath + "'");
 
             if (mlTools[i] == "posenet") {
+                await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                    TTFElog("debug", message);
+                    imageTime = message;
+                });
+
                 await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath);
+
+                await driver.wait(function() {
+                    return driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                        return (message !== imageTime);
+                    });
+                }, 100000).catch(function() {
+                    throw new Error("failed to load image");
+                });
             } else {
+                await driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                    TTFElog("debug", message);
+                    imageURL = message;
+                });
+
                 await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath);
+
+                await driver.wait(function() {
+                    return driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                        return (message !== imageURL);
+                    });
+                }, 100000).catch(function() {
+                    throw new Error("failed to load image");
+                });
             }
         } else {
             TTFElog("console", "with the default image");
         }
-
-        await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
 
         for (let j = 0; j < backendModels.length; j++) {
             let backendModel;
@@ -241,17 +268,11 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                 TTFElog("debug", "no need to change current backend");
             }
 
-            await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000);
-
-            let checkBackendModel;
-            await backendElement.getText().then(function(message) {
-                checkBackendModel = message;
-            });
-
-            if (checkBackendModel !== backendModels[j]) {
-                TTFElog("debug", "can not change current backend to '" + backendModels[j] + "'");
-                TTFElog("console", "example: " + mlTools[i] + " " + backendModels[j] + " is canceled");
-            } else {
+            await driver.wait(function() {
+                return backendElement.getText().then(function(message) {
+                    return (message === backendModels[j]);
+                });
+            }, 10000).then(async function() {
                 let inferenceTime;
                 await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
                     inferenceTime = message;
@@ -289,7 +310,10 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
 
                     checkTestResult(mlTools[i], backendModels[j], inferenceTime, nameFirst, probabilityFirst);
                 }
-            }
+            }).catch(function() {
+                TTFElog("debug", "can not change current backend to '" + backendModels[j] + "'");
+                TTFElog("console", "example: " + mlTools[i] + " " + backendModels[j] + " is canceled");
+            });
         }
     }
 
