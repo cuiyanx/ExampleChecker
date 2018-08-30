@@ -332,23 +332,23 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                     inferenceTime = message;
                     TTFElog("debug", "current inference time '" + inferenceTime + "'");
 
-                    if (getBenchmark(mlTool, backendModel, "inferenceTime") == null) {
-                        setBenchmark(mlTool, backendModel, "inferenceTime", inferenceTime);
-                        TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " inference time '" + inferenceTime + "'");
+                    if (getBenchmark(mlTool, backendModels[j], "inferenceTime") == null) {
+                        setBenchmark(mlTool, backendModels[j], "inferenceTime", inferenceTime);
+                        TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " inference time '" + inferenceTime + "'");
                     }
                 });
 
                 if (mlTool == "ssd_mobilenet" || mlTool == "posenet") {
-                    checkTestResult(mlTool, backendModel, inferenceTime, null, null);
+                    checkTestResult(mlTool, backendModels[j], inferenceTime, null, null);
                 } else {
                     let nameFirst, probabilityFirst;
                     await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
                         nameFirst = message;
                         TTFElog("debug", "current first name '" + nameFirst + "'");
 
-                        if (getBenchmark(mlTool, backendModel, "name") == null) {
-                            setBenchmark(mlTool, backendModel, "name", nameFirst);
-                            TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " name '" + nameFirst + "'");
+                        if (getBenchmark(mlTool, backendModels[j], "name") == null) {
+                            setBenchmark(mlTool, backendModels[j], "name", nameFirst);
+                            TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " name '" + nameFirst + "'");
                         }
                     });
 
@@ -356,17 +356,17 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                         probabilityFirst = message.slice(0, -1);
                         TTFElog("debug", "current first probability '" + probabilityFirst + "'");
 
-                        if (getBenchmark(mlTool, backendModel, "probability") == null) {
-                            setBenchmark(mlTool, backendModel, "probability", probabilityFirst);
-                            TTFElog("console", "set benchmark " + mlTool + " " + backendModel + " probability '" + probabilityFirst + "'");
+                        if (getBenchmark(mlTool, backendModels[j], "probability") == null) {
+                            setBenchmark(mlTool, backendModels[j], "probability", probabilityFirst);
+                            TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " probability '" + probabilityFirst + "'");
                         }
                     });
 
-                    checkTestResult(mlTool, backendModel, inferenceTime, nameFirst, probabilityFirst);
+                    checkTestResult(mlTool, backendModels[j], inferenceTime, nameFirst, probabilityFirst);
                 }
             }).catch(function() {
-                TTFElog("debug", "can not change current backend to '" + backendModel + "'");
-                TTFElog("console", "example: " + mlTool + " " + backendModel + " is canceled");
+                TTFElog("debug", "can not change current backend to '" + backendModels[j] + "'");
+                TTFElog("console", "example: " + mlTool + " " + backendModels[j] + " is canceled");
             });
 
             await driver.sleep(3000);
