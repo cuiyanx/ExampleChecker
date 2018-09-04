@@ -7,7 +7,7 @@ const os = require("os");
 
 var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
 var exampleURL = TTFEjson.exampleURL;
-var libPath = process.cwd() + "/lib/";
+var libPath = process.cwd() + "/lib/image/";
 var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
 var backendModels = ["WASM", "WebGL2", "WebML", "MPS", "BNNS"];
 

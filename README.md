@@ -9,14 +9,7 @@ test tool for [webml-polyfill examples](https://github.com/intel/webml-polyfill/
    chromedriver(2.37)  -->  google-chrome(65.x.xxx)
    ```
 
-* Add *chromedriver* to systerm path.
-   + For linux:
-
-      ```sh
-      export PATH=<yourPath>:$PATH
-      ```
-
-   + For mac: copy *chromedriver* to `/usr/local/bin/`
+* Copy *chromedriver* to TTFE webdriver path `./lib/chromedriver/`.
 
 ## Install
 

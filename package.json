@@ -8,7 +8,7 @@
     "src": "src"
   },
   "scripts": {
-    "test": "node ./src/main.js"
+    "test": "export PATH=./lib/chromedriver:$PATH && node ./src/main.js"
   },
   "devDependencies": {
     "selenium-webdriver": "^4.0.0-alpha.1"
