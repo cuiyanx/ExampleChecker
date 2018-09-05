@@ -317,6 +317,7 @@ function checkTestResult (mlTool, backendModel, inferenceTime, name, probability
                 await backendElement.click();
                 await driver.sleep(3000);
                 await driver.findElement(By.xpath('//*[@id="' + backendId.get(backendModel) + '"]')).click();
+                await driver.sleep(3000);
                 TTFElog("debug", "change current backend to '" + backendModel + "'");
             } else {
                 TTFElog("debug", "no need to change current backend");
