@@ -1,27 +1,28 @@
 {
-  "name": "TTFE",
+  "name": "ExampleChecker",
   "version": "1.0.0",
-  "description": "test tool for [webml-polyfill examples](https://github.com/intel/webml-polyfill/tree/master/examples)",
+  "description": "test tool for checking [webml-polyfill examples](https://github.com/intel/webml-polyfill/tree/master/examples)",
   "main": "./src/main.js",
   "directories": {
     "lib": "lib",
     "src": "src"
   },
   "scripts": {
-    "test": "export PATH=./lib/chromedriver:$PATH && node ./src/main.js"
+    "test": "node ./src/main.js"
   },
   "devDependencies": {
+    "chromedriver": "^2.41.0",
     "selenium-webdriver": "^4.0.0-alpha.1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cuiyanx/TTFE.git"
+    "url": "git+https://github.com/cuiyanx/ExampleChecker.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "yanx.cui@intel.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cuiyanx/TTFE/issues"
+    "url": "https://github.com/cuiyanx/ExampleChecker/issues"
   },
-  "homepage": "https://github.com/cuiyanx/TTFE#readme"
+  "homepage": "https://github.com/cuiyanx/ExampleChecker#readme"
 }
