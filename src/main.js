@@ -2,35 +2,88 @@ const Builder = require("../node_modules/selenium-webdriver").Builder;
 const By = require("../node_modules/selenium-webdriver").By;
 const until = require("../node_modules/selenium-webdriver").until;
 const Chrome = require("../node_modules/selenium-webdriver/chrome");
+const execSync = require("child_process").execSync;
 const fs = require("fs");
 const os = require("os");
 
-var TTFEjson = JSON.parse(fs.readFileSync("./TTFE.config.json"));
-var exampleURL = TTFEjson.exampleURL;
-var libPath = process.cwd() + "/lib/image/";
-var mlTools = ["mobilenet", "squeezenet", "ssd_mobilenet", "posenet"];
-var backendModels = ["WASM", "WebGL2", "WebML", "MPS", "BNNS"];
+var ECjson = JSON.parse(fs.readFileSync("./ExampleChecker.json"));
+var exampleURL = ECjson.exampleURL;
+var testPlatform = ECjson.platform;
+var browserPath = ECjson.chromium.path;
+var chromiumFlag = ECjson.chromium.flag;
+var imageFlag = ECjson.image.flag;
+var chromeOption = new Chrome.Options();
+var runPlatform, adbPath, command, imagePath;
+var Examples = ["image_classification_onnx", "image_classification_tflite", "posenet", "ssd_mobilenet"];
+var CollectionModels = [
+    "default",
+    "SqueezeNet",
+    "Mobilenet_V1",
+    "Mobilenet_V2",
+    "Inception_V3",
+    "Inception_V4",
+    "Squeezenet",
+    "Inception_Resnet_V2"
+];
+var CollectionBackends = [
+    "WASM",
+    "WebGL2",
+    "WebML"
+];
+var CollectionPrefers = [
+    "skip",
+    "BNNS",
+    "MPS"
+];
+var defaultModels = ["default"];
+var defaultBackend = "WASM";
+var defaultPrefers = ["skip"];
+var resultData = new Map();
 
-var backendId = new Map();
-backendId.set("WASM", "wasm");
-backendId.set("WebGL2", "webgl");
-backendId.set("WebML", "webml");
-
-var platform = null;
 var sys = os.type();
-if (sys == "Linux") {
-    platform = "linux";
-} else if (sys == "Darwin") {
-    platform = "mac";
-} else if (sys == "Windows_NT") {
-    platform = "windows";
+switch(sys) {
+    case "Linux":
+        runPlatform = "Linux";
+        adbPath = "./lib/adb-tool/Linux/adb";
+        imagePath = process.cwd() + "/lib/image/";
+        break;
+    case "Darwin":
+        runPlatform = "Mac";
+        adbPath = "./lib/adb-tool/Mac/adb";
+        imagePath = process.cwd() + "/lib/image/";
+        break;
+    case "Windows_NT":
+        runPlatform = "Windows";
+        adbPath = ".\\lib\\adb-tool\\Windows\\adb";
+        imagePath = process.cwd() + "\\lib/image\\";
+        break;
 }
 
-var browserPath = TTFEjson.chromium.path;
-var chromeOption = new Chrome.Options();
-
-if (TTFEjson.chromium.flag) {
-    chromeOption = chromeOption.setChromeBinaryPath(browserPath);
+switch(testPlatform) {
+    case "Windows":
+        chromeOption = chromeOption.setChromeBinaryPath(browserPath);
+        if (chromiumFlag) {
+            chromeOption = chromeOption.addArguments("--no-sandbox");
+        };
+        break;
+    case "Linux":
+        chromeOption = chromeOption.setChromeBinaryPath(browserPath);
+        if (chromiumFlag) {
+            chromeOption = chromeOption.addArguments("--no-sandbox");
+        };
+        break;
+    case "Mac":
+        chromeOption = chromeOption.setChromeBinaryPath(browserPath);
+        break;
+    case "Android":
+        if (chromiumFlag) {
+            chromeOption = chromeOption.androidPackage("org.chromium.chrome");
+        } else {
+            chromeOption = chromeOption.androidPackage("com.android.chrome");
+        };
+        command = adbPath + " start-server";
+        execSync(command, {encoding: "UTF-8", stdio: "pipe"});
+        break;
 }
 
 const driver = new Builder()
@@ -39,344 +92,499 @@ const driver = new Builder()
     .build();
 
 var debugFlag = false;
-function TTFElog (target, message) {
+function EClog (target, message) {
     if (target == "console") {
-        console.log("TTFE -- " + message);
+        console.log("EC -- " + message);
     } else if (target == "debug") {
-        if (debugFlag) console.log("TTFE -- " + message);
+        if (debugFlag) console.log("EC -- " + message);
     } else {
         throw new Error("Not support target '" + target + "'");
     }
 }
 
-function getImage (mlTool) {
-    let imageName;
-
-    if (mlTool == "mobilenet") {
-        imageName = TTFEjson.image.mobilenet;
-    } else if (mlTool == "squeezenet") {
-        imageName = TTFEjson.image.squeezenet;
-    } else if (mlTool == "ssd_mobilenet") {
-        imageName = TTFEjson.image.ssd_mobilenet;
-    } else if (mlTool == "posenet") {
-        imageName = TTFEjson.image.posenet;
+function getBenchmark (example, model, backend, prefer, parameter) {
+    if (prefer !== "skip") {
+        return ECjson[example][model][backend][prefer][parameter];
+    } else {
+        return ECjson[example][model][backend][parameter];
     }
-
-    return imageName;
 }
 
-function getBenchmark (mlTool, backendModel, parameter) {
-    let value;
-
-    if (mlTool == "mobilenet") {
-        value = TTFEjson.mobilenet;
-    } else if (mlTool == "squeezenet") {
-        value = TTFEjson.squeezenet;
-    } else if (mlTool == "ssd_mobilenet") {
-        value = TTFEjson.ssd_mobilenet;
-    } else if (mlTool == "posenet") {
-        value = TTFEjson.posenet;
+function setBenchmark (example, model, backend, prefer, parameter, value) {
+    if (typeof ECjson[example] == "undefined") {
+        ECjson[example] = new Map();
     }
 
-    if (backendModel == "WASM") {
-        value = value.WASM;
-    } else if (backendModel == "WebGL2") {
-        value = value.WebGL2;
-    } else if (backendModel == "WebML") {
-        value = value.WebML;
-    } else if (backendModel == "MPS") {
-        value = value.MPS;
-    } else if (backendModel == "BNNS") {
-        value = value.BNNS;
+    if (typeof ECjson[example][model] == "undefined") {
+        ECjson[example][model] = new Map();
     }
 
-    if (parameter == "inferenceTime") {
-        value = value.inferenceTime;
-    } else if (parameter == "name") {
-        value = value.name;
-    } else if (parameter == "probability") {
-        value = value.probability;
+    if (typeof ECjson[example][model][backend] == "undefined") {
+        ECjson[example][model][backend] = new Map();
     }
 
-    return value;
+    if (prefer !== "skip") {
+        if (typeof ECjson[example][model][backend][prefer] == "undefined") {
+            ECjson[example][model][backend][prefer] = new Map();
+        }
+
+        ECjson[example][model][backend][prefer][parameter] = value;
+    } else {
+        ECjson[example][model][backend][parameter] = value;
+    }
+
+    fs.writeFileSync("./ExampleChecker.json", JSON.stringify(ECjson, null, 4));
 }
 
-function setBenchmark (mlTool, backendModel, parameter, value) {
-    if (mlTool == "mobilenet") {
-        if (backendModel == "WASM") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.mobilenet.WASM.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.mobilenet.WASM.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.mobilenet.WASM.probability = value;
-            }
-        } else if (backendModel == "WebGL2") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.mobilenet.WebGL2.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.mobilenet.WebGL2.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.mobilenet.WebGL2.probability = value;
-            }
-        } else if (backendModel == "WebML") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.mobilenet.WebML.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.mobilenet.WebML.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.mobilenet.WebML.probability = value;
-            }
-        }
-    } else if (mlTool == "squeezenet") {
-        if (backendModel == "WASM") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.squeezenet.WASM.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.squeezenet.WASM.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.squeezenet.WASM.probability = value;
-            }
-        } else if (backendModel == "WebGL2") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.squeezenet.WebGL2.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.squeezenet.WebGL2.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.squeezenet.WebGL2.probability = value;
-            }
-        } else if (backendModel == "WebML") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.squeezenet.WebML.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.squeezenet.WebML.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.squeezenet.WebML.probability = value;
-            }
-        } else if (backendModel == "MPS") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.squeezenet.MPS.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.squeezenet.MPS.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.squeezenet.MPS.probability = value;
-            }
-        } else if (backendModel == "BNNS") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.squeezenet.BNNS.inferenceTime = value;
-            } else if (parameter == "name") {
-                TTFEjson.squeezenet.BNNS.name = value;
-            } else if (parameter == "probability") {
-                TTFEjson.squeezenet.BNNS.probability = value;
-            }
-        }
-    } else if (mlTool == "ssd_mobilenet") {
-        if (backendModel == "WASM") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.ssd_mobilenet.WASM.inferenceTime = value;
-            }
-        } else if (backendModel == "WebGL2") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.ssd_mobilenet.WebGL2.inferenceTime = value;
-            }
-        } else if (backendModel == "WebML") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.ssd_mobilenet.WebML.inferenceTime = value;
-            }
-        }
-    } else if (mlTool == "posenet") {
-        if (backendModel == "WASM") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.posenet.WASM.inferenceTime = value;
-            }
-        } else if (backendModel == "WebGL2") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.posenet.WebGL2.inferenceTime = value;
-            }
-        } else if (backendModel == "WebML") {
-            if (parameter == "inferenceTime") {
-                TTFEjson.posenet.WebML.inferenceTime = value;
-            }
-        }
+function replaceNullValue (example, model, backend, prefer, InferenceTime, Label, Probability) {
+    if (getBenchmark(example, model, backend, prefer, "InferenceTime") == null) {
+        setBenchmark(example, model, backend, prefer, "InferenceTime", InferenceTime);
     }
 
-    fs.writeFileSync("./TTFE.config.json", JSON.stringify(TTFEjson, null, 4));
+    if (example == "image_classification_onnx" || example == "image_classification_tflite") {
+        if (getBenchmark(example, model, backend, prefer, "Label") == null) {
+            setBenchmark(example, model, backend, prefer, "Label", Label);
+        }
+
+        if (getBenchmark(example, model, backend, prefer, "Probability") == null) {
+            setBenchmark(example, model, backend, prefer, "Probability", Probability);
+        }
+    }
 }
 
-function checkTestResult (mlTool, backendModel, inferenceTime, name, probability) {
+function setResultData (example, model, backend, prefer, parameter, value) {
+    if (typeof resultData.get(example) == "undefined") {
+        resultData.set(example, new Map());
+    }
+
+    if (typeof resultData.get(example).get(model) == "undefined") {
+        resultData.get(example).set(model, new Map());
+    }
+
+    if (typeof resultData.get(example).get(model).get(backend) == "undefined") {
+        resultData.get(example).get(model).set(backend, new Map());
+    }
+
+    if (prefer !== "skip") {
+        if (typeof resultData.get(example).get(model).get(backend).get(prefer) == "undefined") {
+            resultData.get(example).get(model).get(backend).set(prefer, new Map());
+        }
+
+        resultData.get(example).get(model).get(backend).get(prefer).set(parameter, value);
+    } else {
+        resultData.get(example).get(model).get(backend).set(parameter, value);
+    }
+}
+
+function printResultData () {
+    console.log("");
+    console.log("test platform: " + testPlatform);
+    console.log(" run platform: " + runPlatform);
+
+    if (chromiumFlag) {
+        console.log("      browser: chromium");
+    } else {
+        console.log("      browser: chrome");
+    }
+
+    console.log("");
+    console.log("Result:");
+
+    for (let exampleKey of resultData.keys()) {
+        console.log("  example: " + exampleKey);
+        for (let modelKey of resultData.get(exampleKey).keys()) {
+            console.log("    model: " + modelKey);
+            for (let backendKey of resultData.get(exampleKey).get(modelKey).keys()) {
+                if (typeof resultData.get(exampleKey).get(modelKey).get(backendKey).get("result") == "undefined") {
+                    console.log("  backend: " + backendKey);
+                    for (let preferKey of resultData.get(exampleKey).get(modelKey).get(backendKey).keys()) {
+                        console.log("   prefer: " + preferKey + " - " +
+                                    resultData.get(exampleKey).get(modelKey).get(backendKey).get(preferKey).get("result"));
+                    }
+                } else {
+                    console.log("  backend: " + backendKey + " - " +
+                                resultData.get(exampleKey).get(modelKey).get(backendKey).get("result"));
+                }
+            }
+            console.log("");
+        }
+    }
+}
+
+function checkTestResult (example, model, backend, prefer, InferenceTime, Label, Probability) {
     let result = "passed";
 
-    let benchmarkTime = getBenchmark(mlTool, backendModel, "inferenceTime");
-    if (inferenceTime > benchmarkTime && ((inferenceTime - benchmarkTime) > benchmarkTime * 0.05)) {
+    let benchmarkTime = getBenchmark(example, model, backend, prefer, "InferenceTime");
+    if (InferenceTime > benchmarkTime && ((InferenceTime - benchmarkTime) > benchmarkTime * 0.05)) {
         result = "failed";
     }
 
-    if (name !== null && result !== "failed") {
-        let benchmarkName = getBenchmark(mlTool, backendModel, "name");
-        if (name !== benchmarkName) {
+    if (Label !== null && result !== "failed") {
+        let benchmarkLabel = getBenchmark(example, model, backend, prefer, "Label");
+        if (Label !== benchmarkLabel) {
             result = "failed";
         }
     }
 
-    if (probability !== null && result !== "failed") {
-        let benchmarkProbability = getBenchmark(mlTool, backendModel, "probability");
-        if (probability < benchmarkProbability && ((benchmarkProbability - probability) > benchmarkProbability * 0.05)) {
+    if (Probability !== null && result !== "failed") {
+        let benchmarkProbability = getBenchmark(example, model, backend, prefer, "Probability");
+        if (Probability < benchmarkProbability && ((benchmarkProbability - Probability) > benchmarkProbability * 0.05)) {
             result = "failed";
         }
     }
 
-    TTFElog("console", "example: " + mlTool + " " + backendModel + " is " + result);
+    setResultData(example, model, backend, prefer, "result", result);
+    EClog("debug", result + ": example '" + example + "' with backend '" + backend + "' in model '" + model + "'");
 }
 
+var currentExample, currentModel, currentBackend, currentPrefer, currentInferenceTime, currentLabel, currentProbability;
+var Models, Backends, Prefers;
 (async function() {
-    TTFElog("console", "example test is start");
+    EClog("console", "example test is start");
 
-    for (let i = 0; i < mlTools.length; i++) {
-        for (let j = 0; j < backendModels.length; j++) {
-            let mlTool = mlTools[i];
-            let backendModel = backendModels[j];
-            let pageURL = exampleURL + mlTool + "/";
+    // Refresh: currentModel, currentBackend, currentPrefer
+    var waitLoadPage = async function() {
+        await driver.wait(async function() {
+            let modelFlag = false;
+            let backendFlag = false;
+            let preferFlag = false;
 
-            if (backendModel == "MPS" || backendModel == "BNNS") {
-                if (platform == "mac" && mlTool == "squeezenet") {
-                    if (backendModel == "MPS") {
-                        pageURL = pageURL + "index.html?prefer=sustained";
-                        backendModel = "WebML";
-                    } else if (backendModel == "BNNS") {
-                        pageURL = pageURL + "index.html?prefer=fast";
-                        backendModel = "WebML";
+            await driver.findElement(By.xpath("//*[@id='selectModel']")).getText().then(function(message) {
+                EClog("debug", "model: " + message);
+                for (let model of CollectionModels) {
+                    if (message == model) {
+                        modelFlag = true;
+                        currentModel = message;
                     }
-                } else {
-                    TTFElog("debug", "example: not support " + mlTool + " " + backendModel + " on " + platform);
-                    continue;
+                };
+            }).catch(function(err) {
+                currentModel = defaultModels[0];
+                modelFlag = true;
+            });
+
+            await driver.findElement(By.xpath("//*[@id='backend']")).getText().then(function(message) {
+                EClog("debug", "backend: " + message);
+                for (let backend of CollectionBackends) {
+                    if (message == backend) {
+                        backendFlag = true;
+                        currentBackend = message;
+                    }
                 }
+            }).catch(function(err) {
+                currentBackend = defaultBackend;
+                backendFlag = true;
+            });
+
+            await driver.findElement(By.xpath("//*[@id='selectPrefer']")).getText().then(function(message) {
+                EClog("debug", "prefer: " + message);
+                if (message == "") {
+                    currentPrefer = defaultPrefers[0];
+                    preferFlag = true;
+                } else {
+                    for (let prefer of CollectionPrefers) {
+                        if (message == prefer) {
+                            preferFlag = true;
+                            currentPrefer = message;
+                        }
+                    }
+                }
+            }).catch(function(err) {
+                currentPrefer = defaultPrefers[0];
+                preferFlag = true;
+            });
+
+            if (modelFlag == true && backendFlag == true && preferFlag == true) {
+                return true;
+            } else {
+                return false;
             }
+        }, 300000).then(function() {
+            EClog("debug", "currentExample: " + currentExample);
+            EClog("debug", "currentModel: " + currentModel);
+            EClog("debug", "currentBackend: " + currentBackend);
+        }).catch(function(err) {
+            EClog("debug", err);
+        });
 
-            await driver.getCurrentUrl().then(async function(url) {
-                if (url !== pageURL) {
-                    await driver.get(pageURL);
-                    TTFElog("console", "open '" + pageURL + "'");
+        await driver.sleep(5000);
+    }
 
-                    await driver.wait(until.elementLocated(By.xpath("//*[@id='inferenceTime']/em")), 100000).catch(function() {
-                        throw new Error("failed to load web page");
+    var getModels = async function() {
+        await driver.findElement(By.xpath("//*[@id='selectModel']")).then(async function(element) {
+            await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                for (let element of elements) {
+                    await element.getAttribute("textContent").then(function(message) {
+                        EClog("debug", message);
+                        Models.push(message);
                     });
+                }
+            });
+        }).catch(function(err) {
+            Models = defaultModels;
+        });
+    }
 
-                    let imageURL, imageTime, imagePath;
-                    if (TTFEjson.image.flag == true) {
-                        TTFElog("console", "with image '" + getImage(mlTool) + "'");
+    var getBackends = async function() {
+        await driver.findElement(By.xpath("//*[@id='backend']")).then(async function(element) {
+            await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                for (let element of elements) {
+                    await element.getAttribute("class").then(async function(message) {
+                        EClog("debug", message);
 
-                        imagePath = libPath + getImage(mlTool);
-                        TTFElog("debug", "current image path '" + imagePath + "'");
-
-                        if (mlTool == "posenet") {
-                            await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
-                                TTFElog("debug", message);
-                                imageTime = message;
-                            });
-
-                            await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath);
-
-                            await driver.wait(function() {
-                                return driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
-                                    return (message !== imageTime);
-                                });
-                            }, 100000).catch(function() {
-                                throw new Error("failed to load image");
-                            });
-                        } else {
-                            await driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
-                                TTFElog("debug", message);
-                                imageURL = message;
-                            });
-
-                            await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath);
-
-                            await driver.wait(function() {
-                                return driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
-                                    return (message !== imageURL);
-                                });
-                            }, 100000).catch(function() {
-                                throw new Error("failed to load image");
+                        if (message !== "dropdown-item disabled") {
+                            await element.getAttribute("textContent").then(function(message) {
+                                EClog("debug", message);
+                                Backends.push(message);
                             });
                         }
-                    } else {
-                        TTFElog("console", "with the default image");
-                    }
+                    });
                 }
             });
+        }).catch(function(err) {
+            Backends.push(defaultBackend);
+        });
+    }
 
-            let backendCurrent;
-            let backendElement = await driver.findElement(By.xpath("//*[@id='backend']"));
+    var getPrefers = async function() {
+        await driver.findElement(By.xpath("//*[@id='selectPrefer']")).then(async function(element) {
+            await element.getAttribute("style").then(async function(message) {
+                if (message == "display: inline") {
+                    await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                        for (let ele of elements) {
+                            await ele.getAttribute("textContent").then(function(message) {
+                                EClog("debug", message);
+                                Prefers.push(message);
+                            });
+                        }
+                    });
+                } else {
+                    Prefers = defaultPrefers;
+                }
+            });
+        }).catch(function(err) {
+            Prefers = defaultPrefers;
+        });
+    }
 
-            await backendElement.getText().then(function(message) {
-                backendCurrent = message;
-                TTFElog("debug", "current backend '" + backendCurrent + "'");
+    var switchImage = async function(example) {
+        let imageName, imageTime, imageURL;
+
+        if (example == "image_classification_onnx") {
+            imageName = ECjson.image.image_classification_onnx;
+        } else if (example == "image_classification_tflite") {
+            imageName = ECjson.image.image_classification_tflite;
+        } else if (example == "posenet") {
+            imageName = ECjson.image.posenet;
+        } else if (example == "ssd_mobilenet") {
+            imageName = ECjson.image.ssd_mobilenet;
+        }
+
+        EClog("console", "with image '" + imageName + "'");
+
+        if (example == "posenet") {
+            await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                imageTime = message;
             });
 
-            if (backendCurrent !== backendModel) {
-                await backendElement.click();
-                await driver.sleep(3000);
-                await driver.findElement(By.xpath('//*[@id="' + backendId.get(backendModel) + '"]')).click();
-                await driver.sleep(3000);
-                TTFElog("debug", "change current backend to '" + backendModel + "'");
-            } else {
-                TTFElog("debug", "no need to change current backend");
-            }
+            await driver.findElement(By.xpath("//*[@id='image']")).sendKeys(imagePath + imageName).catch(function(err) {EClog("debug", err);});
 
             await driver.wait(function() {
-                return backendElement.getText().then(function(message) {
-                    return (message === backendModel);
+                return driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+                    return (message !== imageTime);
                 });
-            }, 10000).then(async function() {
-                let inferenceTime;
-                await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
-                    inferenceTime = message;
-                    TTFElog("debug", "current inference time '" + inferenceTime + "'");
-
-                    if (getBenchmark(mlTool, backendModels[j], "inferenceTime") == null) {
-                        setBenchmark(mlTool, backendModels[j], "inferenceTime", inferenceTime);
-                        TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " inference time '" + inferenceTime + "'");
-                    }
-                });
-
-                if (mlTool == "ssd_mobilenet" || mlTool == "posenet") {
-                    checkTestResult(mlTool, backendModels[j], inferenceTime, null, null);
-                } else {
-                    let nameFirst, probabilityFirst;
-                    await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
-                        nameFirst = message;
-                        TTFElog("debug", "current first name '" + nameFirst + "'");
-
-                        if (getBenchmark(mlTool, backendModels[j], "name") == null) {
-                            setBenchmark(mlTool, backendModels[j], "name", nameFirst);
-                            TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " name '" + nameFirst + "'");
-                        }
-                    });
-
-                    await driver.findElement(By.xpath("//*[@id='prob0']")).getText().then(function(message) {
-                        probabilityFirst = message.slice(0, -1);
-                        TTFElog("debug", "current first probability '" + probabilityFirst + "'");
-
-                        if (getBenchmark(mlTool, backendModels[j], "probability") == null) {
-                            setBenchmark(mlTool, backendModels[j], "probability", probabilityFirst);
-                            TTFElog("console", "set benchmark " + mlTool + " " + backendModels[j] + " probability '" + probabilityFirst + "'");
-                        }
-                    });
-
-                    checkTestResult(mlTool, backendModels[j], inferenceTime, nameFirst, probabilityFirst);
-                }
-            }).catch(function() {
-                TTFElog("debug", "can not change current backend to '" + backendModels[j] + "'");
-                TTFElog("console", "example: " + mlTool + " " + backendModels[j] + " is canceled");
+            }, 100000).catch(function() {
+                throw new Error("failed to load image");
+            });
+        } else {
+            await driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                imageURL = message;
             });
 
-            await driver.sleep(3000);
+            await driver.findElement(By.xpath("//*[@id='input']")).sendKeys(imagePath + imageName).catch(function(err) {EClog("debug", err);});
+
+            await driver.wait(function() {
+                return driver.findElement(By.xpath("//*[@id='image']")).getAttribute("src").then(function(message) {
+                    return (message !== imageURL);
+                });
+            }, 100000).catch(function() {
+                throw new Error("failed to load image");
+            });
         }
+
+        await driver.sleep(5000);
     }
+
+    var switchModel = async function(model) {
+        EClog("console", "switch model to '" + model + "'");
+
+        await driver.findElement(By.xpath("//*[@id='selectModel']")).then(async function(element) {
+            await element.click();
+            await driver.sleep(3000);
+            await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                for (let ele of elements) {
+                    await ele.getAttribute("textContent").then(function(message) {
+                        if (model == message) {
+                            ele.click();
+                        }
+                    });
+                }
+            });
+            await driver.sleep(5000);
+        });
+    }
+
+    var switchBackend = async function(backend) {
+        EClog("console", "switch backend to '" + backend + "'");
+
+        await driver.findElement(By.xpath("//*[@id='backend']")).click();
+        await driver.sleep(3000);
+
+        switch(backend) {
+            case "WASM":
+                await driver.findElement(By.xpath("//*[@id='wasm']")).click();
+                break;
+            case "WebGL2":
+                await driver.findElement(By.xpath("//*[@id='webgl']")).click();
+                break;
+            case "WebML":
+                await driver.findElement(By.xpath("//*[@id='webml']")).click();
+                break;
+        }
+
+        await driver.sleep(5000);
+    }
+
+    var switchPrefer = async function(prefer) {
+        EClog("console", "switch prefer to '" + prefer + "'");
+
+        await driver.findElement(By.xpath("//*[@id='selectPrefer']")).then(async function(element) {
+            await element.getAttribute("style").then(async function(message) {
+                if (message == "display: inline") {
+                    await element.click();
+                    await driver.sleep(3000);
+                    await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                        for (let ele of elements) {
+                            await ele.getAttribute("textContent").then(function(message) {
+                                if (prefer == message) {
+                                    ele.click();
+                                }
+                            });
+                        }
+                    });
+                    await driver.sleep(5000);
+                }
+            });
+        });
+    }
+
+    // Refresh: currentInferenceTime, currentLabel, currentProbability
+    var getPageData = async function(example) {
+        EClog("console", "grabbing example data");
+
+        if (example == "image_classification_onnx" || example == "image_classification_tflite") {
+            await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
+                currentLabel = message;
+                setResultData(example, currentModel, currentBackend, "Label", currentLabel);
+                EClog("console", "current first name '" + currentLabel + "'");
+            });
+
+            await driver.findElement(By.xpath("//*[@id='prob0']")).getText().then(function(message) {
+                currentProbability = message.slice(0, -1);
+                setResultData(example, currentModel, currentBackend, "Probability", currentProbability);
+                EClog("console", "current first probability '" + currentProbability + "'");
+            });
+        }
+
+        await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
+            currentInferenceTime = message;
+            setResultData(example, currentModel, currentBackend, "InferenceTime", currentInferenceTime);
+            EClog("console", "current inference time '" + currentInferenceTime + "'");
+        });
+    }
+
+    for (let example of Examples) {
+        let pageURL = exampleURL + "/" + example + "/index.html";
+        Models = new Array();
+        Backends = new Array();
+        Prefers = new Array();
+        currentExample = example;
+        currentModel = null;
+        currentBackend = null;
+        currentPrefer = null;
+        currentInferenceTime = null;
+        currentLabel = null;
+        currentProbability = null;
+
+        await driver.get(pageURL).then(async function() {
+            EClog("console", "open '" + pageURL + "'");
+        });
+
+        await waitLoadPage();
+        EClog("console", "load example URL is completed");
+
+        await getModels();
+        await getBackends();
+        await getPrefers();
+
+        if (imageFlag) {
+            await switchImage(currentExample);
+        } else {
+            EClog("console", "with the default image");
+        }
+
+        for (let model of CollectionModels) {
+            if (Models.includes(model)) {
+                if (model !== "default") {
+                    if (model !== currentModel) {
+                        await switchModel(model);
+                        await waitLoadPage();
+                    }
+                }
+
+                for (let backend of CollectionBackends) {
+                    if (Backends.includes(backend)) {
+                        if (backend !== currentBackend) {
+                            await switchBackend(backend);
+                            await waitLoadPage();
+                        }
+
+                        for (let prefer of CollectionPrefers) {
+                            if (Prefers.includes(prefer)) {
+                                if (prefer !== "skip") {
+                                    if (prefer !== currentPrefer) {
+                                        await switchPrefer(prefer);
+                                        await waitLoadPage();
+                                    }
+                                }
+
+                                if (prefer !== currentPrefer && currentBackend == defaultBackend) {
+                                    setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
+                                } else {
+                                    await getPageData(currentExample);
+                                    replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
+                                                     currentInferenceTime, currentLabel, currentProbability);
+                                    checkTestResult(currentExample, currentModel, currentBackend, currentPrefer,
+                                                    currentInferenceTime, currentLabel, currentProbability);
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+            } else {
+                continue;
+            }
+        };
+    }
+
+    printResultData();
 })().then(function() {
-    TTFElog("console", "example test is completed");
+    EClog("console", "example test is completed");
     driver.quit();
 }).catch(function(err) {
-    TTFElog("console", err);
+    EClog("console", err);
     driver.quit();
 });

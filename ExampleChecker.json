@@ -1,0 +1,192 @@
+{
+    "exampleURL": "http://10.126.1.202:8080/examples",
+    "platform": "Linux",
+    "chromium": {
+        "flag": false,
+        "path": "/usr/bin/google-chrome"
+    },
+    "image": {
+        "flag": false,
+        "image_classification_onnx": "cheeseburger.jpg",
+        "image_classification_tflite": "revolver.jpg",
+        "posenet": "football-player.jpg",
+        "ssd_mobilenet": "giant-panda.jpg"
+    },
+    "image_classification_onnx": {
+        "SqueezeNet": {
+            "WASM": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebGL2": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "BNNS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            }
+        }
+    },
+    "image_classification_tflite": {
+        "Mobilenet_V1": {
+            "WASM": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebGL2": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "BNNS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            }
+        },
+        "Mobilenet_V2": {
+            "WASM": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebGL2": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "BNNS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            }
+        },
+        "Inception_V3": {
+            "WASM": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebGL2": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "BNNS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            }
+        },
+        "Squeezenet": {
+            "WASM": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebGL2": {
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "BNNS": {
+                    "InferenceTime": null,
+                    "Label": null,
+                    "Probability": null
+                },
+                "InferenceTime": null,
+                "Label": null,
+                "Probability": null
+            }
+        }
+    },
+    "posenet": {
+        "default": {
+            "WASM": {
+                "InferenceTime": null
+            },
+            "WebGL2": {
+                "InferenceTime": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null
+                },
+                "BNNS": {
+                    "InferenceTime": null
+                },
+                "InferenceTime": null
+            }
+        }
+    },
+    "ssd_mobilenet": {
+        "default": {
+            "WASM": {
+                "InferenceTime": null
+            },
+            "WebGL2": {
+                "InferenceTime": null
+            },
+            "WebML": {
+                "MPS": {
+                    "InferenceTime": null
+                },
+                "BNNS": {
+                    "InferenceTime": null
+                },
+                "InferenceTime": null
+            }
+        }
+    }
+}
