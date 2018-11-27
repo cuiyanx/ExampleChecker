@@ -1,5 +1,5 @@
 {
-    "exampleURL": "http://10.126.1.202:8080/examples",
+    "exampleURL": "http://10.126.1.207:8080/examples",
     "platform": "Linux",
     "chromium": {
         "flag": false,

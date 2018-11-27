@@ -32,11 +32,11 @@ var CollectionBackends = [
 ];
 var CollectionPrefers = [
     "skip",
-    "BNNS",
-    "MPS"
+    "MPS",
+    "BNNS"
 ];
 var defaultModels = ["default"];
-var defaultBackend = "WASM";
+var defaultBackend = ["WASM"];
 var defaultPrefers = ["skip"];
 var resultData = new Map();
 
@@ -234,7 +234,8 @@ function checkTestResult (example, model, backend, prefer, InferenceTime, Label,
     }
 
     setResultData(example, model, backend, prefer, "result", result);
-    EClog("debug", result + ": example '" + example + "' with backend '" + backend + "' in model '" + model + "'");
+
+    EClog("console", "result is '" + result + "'");
 }
 
 var currentExample, currentModel, currentBackend, currentPrefer, currentInferenceTime, currentLabel, currentProbability;
@@ -271,7 +272,7 @@ var Models, Backends, Prefers;
                     }
                 }
             }).catch(function(err) {
-                currentBackend = defaultBackend;
+                currentBackend = defaultBackend[0];
                 backendFlag = true;
             });
 
@@ -320,8 +321,13 @@ var Models, Backends, Prefers;
                 }
             });
         }).catch(function(err) {
-            Models = defaultModels;
+            EClog("debug", err);
+            if (err.name == "NoSuchElementError") {
+                Models = defaultModels;
+            }
         });
+
+        EClog("console", "get models: " + Models);
     }
 
     var getBackends = async function() {
@@ -341,14 +347,19 @@ var Models, Backends, Prefers;
                 }
             });
         }).catch(function(err) {
-            Backends.push(defaultBackend);
+            EClog("debug", err);
+            if (err.name == "NoSuchElementError") {
+                Backends = defaultBackend;
+            }
         });
+
+        EClog("console", "get backends: " + Backends);
     }
 
     var getPrefers = async function() {
         await driver.findElement(By.xpath("//*[@id='selectPrefer']")).then(async function(element) {
-            await element.getAttribute("style").then(async function(message) {
-                if (message == "display: inline") {
+            await element.getAttribute("textContent").then(async function(message) {
+                if (message !== "undefined") {
                     await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
                         for (let ele of elements) {
                             await ele.getAttribute("textContent").then(function(message) {
@@ -362,7 +373,41 @@ var Models, Backends, Prefers;
                 }
             });
         }).catch(function(err) {
-            Prefers = defaultPrefers;
+            EClog("debug", err);
+            if (err.name == "NoSuchElementError") {
+                Prefers = defaultPrefers;
+            }
+        });
+
+        EClog("console", "get prefers: " + Prefers);
+    }
+
+    var getBackendAlert = async function() {
+        EClog("console", "get backend alert");
+
+        let alertFlag = false;
+        await driver.findElement(By.xpath("//*[@id='backendAlert']")).then(async function(element) {
+            alertFlag = true;
+        }).catch(function(err) {
+            EClog("debug", err);
+            if (err.name == "NoSuchElementError") {
+                alertFlag = false;
+            }
+        });
+
+        return alertFlag;
+    }
+
+    var cleanBackendAlert = async function() {
+        EClog("console", "clean backend alert");
+
+        await driver.findElements(By.xpath("//*[@id='backendAlert']")).then(async function(elements) {
+            for (let element of elements) {
+                await element.findElement(By.xpath("./button")).then(async function(ele) {
+                    ele.click();
+                    await driver.sleep(3000);
+                });
+            }
         });
     }
 
@@ -429,7 +474,7 @@ var Models, Backends, Prefers;
                     });
                 }
             });
-            await driver.sleep(5000);
+            await driver.sleep(3000);
         });
     }
 
@@ -451,53 +496,49 @@ var Models, Backends, Prefers;
                 break;
         }
 
-        await driver.sleep(5000);
+        await driver.sleep(3000);
     }
 
     var switchPrefer = async function(prefer) {
         EClog("console", "switch prefer to '" + prefer + "'");
 
         await driver.findElement(By.xpath("//*[@id='selectPrefer']")).then(async function(element) {
-            await element.getAttribute("style").then(async function(message) {
-                if (message == "display: inline") {
-                    await element.click();
-                    await driver.sleep(3000);
-                    await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
-                        for (let ele of elements) {
-                            await ele.getAttribute("textContent").then(function(message) {
-                                if (prefer == message) {
-                                    ele.click();
-                                }
-                            });
+            await element.click();
+            await driver.sleep(3000);
+            await element.findElements(By.xpath("./following-sibling::div[1]/child::*")).then(async function(elements) {
+                for (let ele of elements) {
+                    await ele.getAttribute("textContent").then(function(message) {
+                        if (prefer == message) {
+                            ele.click();
                         }
                     });
-                    await driver.sleep(5000);
                 }
             });
+            await driver.sleep(3000);
         });
     }
 
     // Refresh: currentInferenceTime, currentLabel, currentProbability
-    var getPageData = async function(example) {
+    var getPageData = async function(example, model, backend, prefer) {
         EClog("console", "grabbing example data");
 
         if (example == "image_classification_onnx" || example == "image_classification_tflite") {
             await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
                 currentLabel = message;
-                setResultData(example, currentModel, currentBackend, "Label", currentLabel);
+                setResultData(example, model, backend, prefer, "Label", currentLabel);
                 EClog("console", "current first name '" + currentLabel + "'");
             });
 
             await driver.findElement(By.xpath("//*[@id='prob0']")).getText().then(function(message) {
                 currentProbability = message.slice(0, -1);
-                setResultData(example, currentModel, currentBackend, "Probability", currentProbability);
+                setResultData(example, model, backend, prefer, "Probability", currentProbability);
                 EClog("console", "current first probability '" + currentProbability + "'");
             });
         }
 
         await driver.findElement(By.xpath("//*[@id='inferenceTime']/em")).getText().then(function(message) {
             currentInferenceTime = message;
-            setResultData(example, currentModel, currentBackend, "InferenceTime", currentInferenceTime);
+            setResultData(example, model, backend, prefer, "InferenceTime", currentInferenceTime);
             EClog("console", "current inference time '" + currentInferenceTime + "'");
         });
     }
@@ -548,27 +589,36 @@ var Models, Backends, Prefers;
                             await waitLoadPage();
                         }
 
-                        for (let prefer of CollectionPrefers) {
-                            if (Prefers.includes(prefer)) {
-                                if (prefer !== "skip") {
-                                    if (prefer !== currentPrefer) {
-                                        await switchPrefer(prefer);
-                                        await waitLoadPage();
+                        if (backend == "WebML" && testPlatform == "Mac") {
+                            for (let prefer of CollectionPrefers) {
+                                if (Prefers.includes(prefer)) {
+                                    if (prefer !== "skip") {
+                                        if (prefer !== currentPrefer) {
+                                            await switchPrefer(prefer);
+                                            await waitLoadPage();
+                                        }
                                     }
-                                }
 
-                                if (prefer !== currentPrefer && currentBackend == defaultBackend) {
-                                    setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
+                                    if (prefer !== currentPrefer && await getBackendAlert()) {
+                                        await cleanBackendAlert();
+                                        setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
+                                    } else {
+                                        await getPageData(currentExample, currentModel, currentBackend, currentPrefer);
+                                        replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
+                                                         currentInferenceTime, currentLabel, currentProbability);
+                                        checkTestResult(currentExample, currentModel, currentBackend, currentPrefer,
+                                                        currentInferenceTime, currentLabel, currentProbability);
+                                    }
                                 } else {
-                                    await getPageData(currentExample);
-                                    replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
-                                                     currentInferenceTime, currentLabel, currentProbability);
-                                    checkTestResult(currentExample, currentModel, currentBackend, currentPrefer,
-                                                    currentInferenceTime, currentLabel, currentProbability);
+                                    continue;
                                 }
-                            } else {
-                                continue;
                             }
+                        } else {
+                            await getPageData(currentExample, currentModel, currentBackend, "skip");
+                            replaceNullValue(currentExample, currentModel, currentBackend, "skip",
+                                             currentInferenceTime, currentLabel, currentProbability);
+                            checkTestResult(currentExample, currentModel, currentBackend, "skip",
+                                            currentInferenceTime, currentLabel, currentProbability);
                         }
                     } else {
                         continue;
