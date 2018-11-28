@@ -331,8 +331,13 @@ var Models, Backends, Prefers;
                     }
                 };
             }).catch(function(err) {
-                currentModel = defaultModels[0];
-                modelFlag = true;
+                EClog("debug", err);
+                if (err.name == "NoSuchElementError") {
+                    currentModel = defaultModels[0];
+                    modelFlag = true;
+                } else {
+                    throw err;
+                }
             });
 
             await driver.findElement(By.xpath("//*[@id='backend']")).getText().then(function(message) {
@@ -344,8 +349,13 @@ var Models, Backends, Prefers;
                     }
                 }
             }).catch(function(err) {
-                currentBackend = defaultBackend[0];
-                backendFlag = true;
+                EClog("debug", err);
+                if (err.name == "NoSuchElementError") {
+                    currentBackend = defaultBackend[0];
+                    backendFlag = true;
+                } else {
+                    throw err;
+                }
             });
 
             await driver.findElement(By.xpath("//*[@id='selectPrefer']")).getText().then(function(message) {
@@ -362,8 +372,13 @@ var Models, Backends, Prefers;
                     }
                 }
             }).catch(function(err) {
-                currentPrefer = defaultPrefers[0];
-                preferFlag = true;
+                EClog("debug", err);
+                if (err.name == "NoSuchElementError") {
+                    currentPrefer = defaultPrefers[0];
+                    preferFlag = true;
+                } else {
+                    throw err;
+                }
             });
 
             if (modelFlag == true && backendFlag == true && preferFlag == true) {
@@ -396,6 +411,8 @@ var Models, Backends, Prefers;
             EClog("debug", err);
             if (err.name == "NoSuchElementError") {
                 Models = defaultModels;
+            } else {
+                throw err;
             }
         });
 
@@ -422,6 +439,8 @@ var Models, Backends, Prefers;
             EClog("debug", err);
             if (err.name == "NoSuchElementError") {
                 Backends = defaultBackend;
+            } else {
+                throw err;
             }
         });
 
@@ -448,6 +467,8 @@ var Models, Backends, Prefers;
             EClog("debug", err);
             if (err.name == "NoSuchElementError") {
                 Prefers = defaultPrefers;
+            } else {
+                throw err;
             }
         });
 
@@ -462,6 +483,8 @@ var Models, Backends, Prefers;
             EClog("debug", err);
             if (err.name == "NoSuchElementError") {
                 alertFlag = false;
+            } else {
+                throw err;
             }
         });
 
@@ -659,36 +682,36 @@ var Models, Backends, Prefers;
                             await waitLoadPage();
                         }
 
-                        if (backend == "WebML" && testPlatform == "Mac") {
-                            for (let prefer of CollectionPrefers) {
-                                if (Prefers.includes(prefer)) {
-                                    if (prefer !== "skip") {
-                                        if (prefer !== currentPrefer) {
-                                            await switchPrefer(prefer);
-                                            await waitLoadPage();
-                                        }
-                                    }
-
-                                    if (prefer !== currentPrefer && await getBackendAlert()) {
-                                        await cleanBackendAlert();
-                                        setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
-                                        EClog("console", "unsupport this backend: " + prefer);
-                                    } else {
-                                        await getPageData(currentExample, currentModel, currentBackend, currentPrefer);
-                                        replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
-                                                         currentInferenceTime, currentLabel, currentProbability);
-                                        checkTestResult(currentExample, currentModel, currentBackend, currentPrefer,
-                                                        currentInferenceTime, currentLabel, currentProbability);
-                                    }
-                                } else {
-                                    continue;
-                                }
-                            }
+                        if (backend !== currentBackend && await getBackendAlert()) {
+                            await cleanBackendAlert();
+                            setResultData(currentExample, currentModel, backend, "skip", "result", "unsupport");
+                            EClog("console", "unsupport this backend: " + backend);
                         } else {
-                            if (backend !== currentBackend && await getBackendAlert()) {
-                                await cleanBackendAlert();
-                                setResultData(currentExample, currentModel, backend, "skip", "result", "unsupport");
-                                EClog("console", "unsupport this backend: " + backend);
+                            if (backend == "WebML" && testPlatform == "Mac") {
+                                for (let prefer of CollectionPrefers) {
+                                    if (Prefers.includes(prefer)) {
+                                        if (prefer !== "skip") {
+                                            if (prefer !== currentPrefer) {
+                                                await switchPrefer(prefer);
+                                                await waitLoadPage();
+                                            }
+                                        }
+
+                                        if (prefer !== currentPrefer && await getBackendAlert()) {
+                                            await cleanBackendAlert();
+                                            setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
+                                            EClog("console", "unsupport this backend: " + prefer);
+                                        } else {
+                                            await getPageData(currentExample, currentModel, currentBackend, currentPrefer);
+                                            replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
+                                                             currentInferenceTime, currentLabel, currentProbability);
+                                            checkTestResult(currentExample, currentModel, currentBackend, currentPrefer,
+                                                            currentInferenceTime, currentLabel, currentProbability);
+                                        }
+                                    } else {
+                                        continue;
+                                    }
+                                }
                             } else {
                                 await getPageData(currentExample, currentModel, currentBackend, "skip");
                                 replaceNullValue(currentExample, currentModel, currentBackend, "skip",
