@@ -8,7 +8,8 @@
     "src": "src"
   },
   "scripts": {
-    "test": "node ./src/main.js"
+    "start": "node ./src/main.js",
+    "initJSON": "node ./src/initJSON.js"
   },
   "devDependencies": {
     "chromedriver": "^2.41.0",

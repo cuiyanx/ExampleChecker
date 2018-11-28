@@ -10,7 +10,13 @@ $ npm install
 ## Start
 
 ```sh
-$ npm test
+$ npm start
+```
+
+## Initialize data
+
+```sh
+$ npm run initJSON
 ```
 
 ## Set ExampleChecker.json file

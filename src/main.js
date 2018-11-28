@@ -14,21 +14,25 @@ var chromiumFlag = ECjson.chromium.flag;
 var imageFlag = ECjson.image.flag;
 var chromeOption = new Chrome.Options();
 var runPlatform, adbPath, command, imagePath;
-var Examples = ["image_classification_onnx", "image_classification_tflite", "posenet", "ssd_mobilenet"];
+var Examples = ["image_classification", "posenet", "ssd_mobilenet"];
 var CollectionModels = [
     "default",
-    "SqueezeNet",
-    "Mobilenet_V1",
-    "Mobilenet_V2",
-    "Inception_V3",
-    "Inception_V4",
-    "Squeezenet",
-    "Inception_Resnet_V2"
+    "Mobilenet V1(TFlite)",
+    "Mobilenet V2(TFlite)",
+    "Inception V3(TFlite)",
+    "Inception V4(TFlite)",
+    "Squeezenet(TFlite)",
+    "Incep. Res. V2(TFlite)",
+    "SqueezeNet(Onnx)",
+    "Mobilenet v2(Onnx)",
+    "Resnet v1(Onnx)",
+    "Resnet v2(Onnx)",
+    "Inception v2(Onnx)"
 ];
 var CollectionBackends = [
+    "WebML",
     "WASM",
-    "WebGL2",
-    "WebML"
+    "WebGL2"
 ];
 var CollectionPrefers = [
     "skip",
@@ -55,7 +59,7 @@ switch(sys) {
     case "Windows_NT":
         runPlatform = "Windows";
         adbPath = ".\\lib\\adb-tool\\Windows\\adb";
-        imagePath = process.cwd() + "\\lib/image\\";
+        imagePath = process.cwd() + "\\lib\\image\\";
         break;
 }
 
@@ -102,7 +106,65 @@ function EClog (target, message) {
     }
 }
 
+function changeModelName (modelName) {
+    let name = null;
+    if (modelName == "default" ||
+        modelName == "Mobilenet_V1_TFlite" ||
+        modelName == "Mobilenet_V2_TFlite" ||
+        modelName == "Inception_V3_TFlite" ||
+        modelName == "Inception_V4_TFlite" ||
+        modelName == "Squeezenet_TFlite" ||
+        modelName == "Incep_Res_V2_TFlite" ||
+        modelName == "SqueezeNet_Onnx" ||
+        modelName == "Mobilenet_v2_Onnx" ||
+        modelName == "Resnet_v1_Onnx" ||
+        modelName == "Resnet_v2_Onnx" ||
+        modelName == "Inception_v2_Onnx") {
+        name = modelName;
+    } else {
+        switch(modelName) {
+            case "Mobilenet V1(TFlite)":
+                name = "Mobilenet_V1_TFlite";
+                break;
+            case "Mobilenet V2(TFlite)":
+                name = "Mobilenet_V2_TFlite";
+                break;
+            case "Inception V3(TFlite)":
+                name = "Inception_V3_TFlite";
+                break;
+            case "Inception V4(TFlite)":
+                name = "Inception_V4_TFlite";
+                break;
+            case "Squeezenet(TFlite)":
+                name = "Squeezenet_TFlite";
+                break;
+            case "Incep. Res. V2(TFlite)":
+                name = "Incep_Res_V2_TFlite";
+                break;
+            case "SqueezeNet(Onnx)":
+                name = "SqueezeNet_Onnx";
+                break;
+            case "Mobilenet v2(Onnx)":
+                name = "Mobilenet_v2_Onnx";
+                break;
+            case "Resnet v1(Onnx)":
+                name = "Resnet_v1_Onnx";
+                break;
+            case "Resnet v2(Onnx)":
+                name = "Resnet_v2_Onnx";
+                break;
+            case "Inception v2(Onnx)":
+                name = "Inception_v2_Onnx";
+                break;
+        }
+    }
+
+    return name;
+}
+
 function getBenchmark (example, model, backend, prefer, parameter) {
+    model = changeModelName(model);
+
     if (prefer !== "skip") {
         return ECjson[example][model][backend][prefer][parameter];
     } else {
@@ -111,6 +173,8 @@ function getBenchmark (example, model, backend, prefer, parameter) {
 }
 
 function setBenchmark (example, model, backend, prefer, parameter, value) {
+    model = changeModelName(model);
+
     if (typeof ECjson[example] == "undefined") {
         ECjson[example] = new Map();
     }
@@ -137,11 +201,13 @@ function setBenchmark (example, model, backend, prefer, parameter, value) {
 }
 
 function replaceNullValue (example, model, backend, prefer, InferenceTime, Label, Probability) {
+    model = changeModelName(model);
+
     if (getBenchmark(example, model, backend, prefer, "InferenceTime") == null) {
         setBenchmark(example, model, backend, prefer, "InferenceTime", InferenceTime);
     }
 
-    if (example == "image_classification_onnx" || example == "image_classification_tflite") {
+    if (example == "image_classification") {
         if (getBenchmark(example, model, backend, prefer, "Label") == null) {
             setBenchmark(example, model, backend, prefer, "Label", Label);
         }
@@ -153,6 +219,8 @@ function replaceNullValue (example, model, backend, prefer, InferenceTime, Label
 }
 
 function setResultData (example, model, backend, prefer, parameter, value) {
+    model = changeModelName(model);
+
     if (typeof resultData.get(example) == "undefined") {
         resultData.set(example, new Map());
     }
@@ -212,6 +280,7 @@ function printResultData () {
 }
 
 function checkTestResult (example, model, backend, prefer, InferenceTime, Label, Probability) {
+    model = changeModelName(model);
     let result = "passed";
 
     let benchmarkTime = getBenchmark(example, model, backend, prefer, "InferenceTime");
@@ -414,10 +483,8 @@ var Models, Backends, Prefers;
     var switchImage = async function(example) {
         let imageName, imageTime, imageURL;
 
-        if (example == "image_classification_onnx") {
-            imageName = ECjson.image.image_classification_onnx;
-        } else if (example == "image_classification_tflite") {
-            imageName = ECjson.image.image_classification_tflite;
+        if (example == "image_classification") {
+            imageName = ECjson.image.image_classification;
         } else if (example == "posenet") {
             imageName = ECjson.image.posenet;
         } else if (example == "ssd_mobilenet") {
@@ -522,7 +589,7 @@ var Models, Backends, Prefers;
     var getPageData = async function(example, model, backend, prefer) {
         EClog("console", "grabbing example data");
 
-        if (example == "image_classification_onnx" || example == "image_classification_tflite") {
+        if (example == "image_classification") {
             await driver.findElement(By.xpath("//*[@id='label0']")).getText().then(function(message) {
                 currentLabel = message;
                 setResultData(example, model, backend, prefer, "Label", currentLabel);
