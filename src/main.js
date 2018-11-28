@@ -285,12 +285,14 @@ function checkTestResult (example, model, backend, prefer, InferenceTime, Label,
 
     let benchmarkTime = getBenchmark(example, model, backend, prefer, "InferenceTime");
     if (InferenceTime > benchmarkTime && ((InferenceTime - benchmarkTime) > benchmarkTime * 0.05)) {
+        EClog("console", "inference time is failed. benchmark: '" + benchmarkTime + "'");
         result = "failed";
     }
 
     if (Label !== null && result !== "failed") {
         let benchmarkLabel = getBenchmark(example, model, backend, prefer, "Label");
         if (Label !== benchmarkLabel) {
+            EClog("console", "label is failed. benchmark: '" + benchmarkLabel + "'");
             result = "failed";
         }
     }
@@ -298,6 +300,7 @@ function checkTestResult (example, model, backend, prefer, InferenceTime, Label,
     if (Probability !== null && result !== "failed") {
         let benchmarkProbability = getBenchmark(example, model, backend, prefer, "Probability");
         if (Probability < benchmarkProbability && ((benchmarkProbability - Probability) > benchmarkProbability * 0.05)) {
+            EClog("console", "probability is failed. benchmark: '" + Probability + "'");
             result = "failed";
         }
     }
@@ -452,8 +455,6 @@ var Models, Backends, Prefers;
     }
 
     var getBackendAlert = async function() {
-        EClog("console", "get backend alert");
-
         let alertFlag = false;
         await driver.findElement(By.xpath("//*[@id='backendAlert']")).then(async function(element) {
             alertFlag = true;
@@ -464,14 +465,16 @@ var Models, Backends, Prefers;
             }
         });
 
+        EClog("console", "get backend alert: " + alertFlag);
         return alertFlag;
     }
 
     var cleanBackendAlert = async function() {
-        EClog("console", "clean backend alert");
-
         await driver.findElements(By.xpath("//*[@id='backendAlert']")).then(async function(elements) {
             for (let element of elements) {
+                await element.findElement(By.xpath("./strong")).getAttribute("textContent").then(function(message) {
+                    EClog("console", "clean backend alert: " + message);
+                });
                 await element.findElement(By.xpath("./button")).then(async function(ele) {
                     ele.click();
                     await driver.sleep(3000);
@@ -669,6 +672,7 @@ var Models, Backends, Prefers;
                                     if (prefer !== currentPrefer && await getBackendAlert()) {
                                         await cleanBackendAlert();
                                         setResultData(currentExample, currentModel, backend, prefer, "result", "unsupport");
+                                        EClog("console", "unsupport this backend: " + prefer);
                                     } else {
                                         await getPageData(currentExample, currentModel, currentBackend, currentPrefer);
                                         replaceNullValue(currentExample, currentModel, currentBackend, currentPrefer,
@@ -681,11 +685,17 @@ var Models, Backends, Prefers;
                                 }
                             }
                         } else {
-                            await getPageData(currentExample, currentModel, currentBackend, "skip");
-                            replaceNullValue(currentExample, currentModel, currentBackend, "skip",
-                                             currentInferenceTime, currentLabel, currentProbability);
-                            checkTestResult(currentExample, currentModel, currentBackend, "skip",
-                                            currentInferenceTime, currentLabel, currentProbability);
+                            if (backend !== currentBackend && await getBackendAlert()) {
+                                await cleanBackendAlert();
+                                setResultData(currentExample, currentModel, backend, "skip", "result", "unsupport");
+                                EClog("console", "unsupport this backend: " + backend);
+                            } else {
+                                await getPageData(currentExample, currentModel, currentBackend, "skip");
+                                replaceNullValue(currentExample, currentModel, currentBackend, "skip",
+                                                 currentInferenceTime, currentLabel, currentProbability);
+                                checkTestResult(currentExample, currentModel, currentBackend, "skip",
+                                                currentInferenceTime, currentLabel, currentProbability);
+                            }
                         }
                     } else {
                         continue;
@@ -701,7 +711,15 @@ var Models, Backends, Prefers;
 })().then(function() {
     EClog("console", "example test is completed");
     driver.quit();
+    if (testPlatform == "Android") {
+        command = adbPath + " kill-server";
+        execSync(command, {encoding: "UTF-8", stdio: "pipe"});
+    }
 }).catch(function(err) {
     EClog("console", err);
     driver.quit();
+    if (testPlatform == "Android") {
+        command = adbPath + " kill-server";
+        execSync(command, {encoding: "UTF-8", stdio: "pipe"});
+    }
 });
