@@ -25,8 +25,8 @@ var CollectionModels = [
     "Incep. Res. V2(TFlite)",
     "SqueezeNet(Onnx)",
     "Mobilenet v2(Onnx)",
-    "Resnet v1(Onnx)",
-    "Resnet v2(Onnx)",
+    "ResNet50 v1(Onnx)",
+    "ResNet50 v2(Onnx)",
     "Inception v2(Onnx)"
 ];
 var CollectionBackends = [
@@ -117,8 +117,8 @@ function changeModelName (modelName) {
         modelName == "Incep_Res_V2_TFlite" ||
         modelName == "SqueezeNet_Onnx" ||
         modelName == "Mobilenet_v2_Onnx" ||
-        modelName == "Resnet_v1_Onnx" ||
-        modelName == "Resnet_v2_Onnx" ||
+        modelName == "ResNet50_v1_Onnx" ||
+        modelName == "ResNet50_v2_Onnx" ||
         modelName == "Inception_v2_Onnx") {
         name = modelName;
     } else {
@@ -147,11 +147,11 @@ function changeModelName (modelName) {
             case "Mobilenet v2(Onnx)":
                 name = "Mobilenet_v2_Onnx";
                 break;
-            case "Resnet v1(Onnx)":
-                name = "Resnet_v1_Onnx";
+            case "ResNet50 v1(Onnx)":
+                name = "ResNet50_v1_Onnx";
                 break;
-            case "Resnet v2(Onnx)":
-                name = "Resnet_v2_Onnx";
+            case "ResNet50 v2(Onnx)":
+                name = "ResNet50_v2_Onnx";
                 break;
             case "Inception v2(Onnx)":
                 name = "Inception_v2_Onnx";

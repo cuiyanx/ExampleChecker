@@ -1,5 +1,5 @@
 {
-    "exampleURL": "http://10.126.1.207:8080/examples",
+    "exampleURL": "http://10.126.1.206:8080/examples",
     "platform": "Linux",
     "chromium": {
         "flag": false,
@@ -228,7 +228,7 @@
                 "Probability": null
             }
         },
-        "Resnet_v1_Onnx": {
+        "ResNet50_v1_Onnx": {
             "WebML": {
                 "MPS": {
                     "InferenceTime": null,
@@ -255,7 +255,7 @@
                 "Probability": null
             }
         },
-        "Resnet_v2_Onnx": {
+        "ResNet50_v2_Onnx": {
             "WebML": {
                 "MPS": {
                     "InferenceTime": null,
